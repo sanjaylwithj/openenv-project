@@ -6,17 +6,19 @@ build-backend = "setuptools.build_meta"
 name = "supply-chain-openenv"
 version = "1.0.0"
 description = "AI-powered Supply Chain Disruption Management OpenEnv"
-authors = [
-    { name = "SANTHOSH L,SANJAY SK, PRAVEEN" }
-]
+authors = [{ name = "SANTHOSH L , SANJAY SK , PRAVEEN" }]
 readme = "README.md"
 requires-python = ">=3.10"
 
 dependencies = [
     "fastapi",
     "uvicorn",
-    "pydantic"
+    "pydantic",
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+server = "server.app:app"
 
 [tool.setuptools]
 py-modules = [
