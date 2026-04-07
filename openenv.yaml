@@ -1,0 +1,155 @@
+name: supply-chain-disruption-management
+version: "1.0.0"
+description: >
+  A production-grade reinforcement learning environment simulating real-world
+  supply chain disruption management. An AI agent must route orders across a
+  global logistics network under uncertainty — navigating port closures, weather
+  events, supplier failures, and geopolitical disruptions — while balancing cost,
+  speed, and SLA compliance.
+
+author: "Supply Chain AI Lab"
+license: MIT
+
+environment:
+  type: sequential_decision
+  domain: logistics
+  real_world: true
+
+  observation_space:
+    type: structured
+    schema: Observation
+    fields:
+      - episode_day: integer
+      - max_days: integer
+      - nodes: list[NodeStatus]
+      - lanes: list[ShipmentLane]
+      - pending_orders: list[PendingOrder]
+      - active_disruptions: list[DisruptionEvent]
+      - budget_remaining: float
+      - cumulative_cost: float
+      - on_time_delivery_rate: float
+      - service_level: float
+      - weather_forecast: dict[str, float]
+      - spot_market_premium: float
+      - fulfilled_orders: integer
+      - total_orders: integer
+
+  action_space:
+    type: discrete_structured
+    schema: Action
+    fields:
+      - order_id: string
+      - routing_decision:
+          type: enum
+          values:
+            - standard_route
+            - express_route
+            - spot_market
+            - split_shipment
+            - defer_24h
+            - defer_48h
+            - source_alternative
+            - partial_fulfill
+      - alternate_supplier: string | null
+      - reasoning: string | null
+
+  reward:
+    type: dense
+    schema: Reward
+    range: [-1.0, 1.0]
+    components:
+      delivery_reward:    0.35
+      cost_efficiency:    0.25
+      sla_compliance:     0.30
+      disruption_penalty: 0.10
+
+tasks:
+  - id: task_easy
+    name: "Single-Lane Routing Under Stable Conditions"
+    difficulty: easy
+    max_steps: 20
+    budget_usd: 500000
+    passing_score: 0.70
+    seed: 42
+
+  - id: task_medium
+    name: "Disruption Response with Budget Trade-offs"
+    difficulty: medium
+    max_steps: 60
+    budget_usd: 800000
+    passing_score: 0.60
+    seed: 99
+
+  - id: task_hard
+    name: "Cascading Disruptions Under Tight Budget Constraint"
+    difficulty: hard
+    max_steps: 130
+    budget_usd: 600000
+    passing_score: 0.50
+    seed: 7
+
+endpoints:
+  reset:       POST /reset?task_id={task_id}
+  step:        POST /step
+  state:       GET  /state?task_id={task_id}
+  observation: GET  /observation?task_id={task_id}
+  grader:      POST /grader
+  baseline:    POST /baseline
+  tasks:       GET  /tasks
+  health:      GET  /health
+  demo:        GET  /demo?task_id={task_id}
+
+inference_script: inference.py
+
+grader:
+  type: deterministic
+  score_range: [0.0, 1.0]
+  criteria:
+    - on_time_delivery_rate
+    - budget_utilization
+    - mean_reward
+    - sla_compliance
+    - disruption_adaptation   # medium + hard
+    - cost_per_unit           # hard only
+
+network_topology:
+  suppliers:
+    - SUP_CN_SHG  # Shanghai, China
+    - SUP_IN_MUM  # Mumbai, India
+    - SUP_MX_MTY  # Monterrey, Mexico
+  warehouses:
+    - WH_US_LAX   # Los Angeles, USA
+    - WH_EU_RTM   # Rotterdam, Netherlands
+    - WH_SG_SIN   # Singapore
+  demand_nodes:
+    - DEM_US_CHI  # Chicago, USA
+    - DEM_DE_MUC  # Munich, Germany
+    - DEM_JP_TYO  # Tokyo, Japan
+  lanes: 12       # ocean + air freight corridors
+
+disruption_types:
+  - port_closure
+  - weather
+  - supplier_failure
+  - geopolitical
+  - demand_spike
+  - carrier_strike
+
+reward_range: [-1.0, 1.0]
+
+baseline_scores:
+  task_easy:
+    agent: heuristic-baseline
+    score: 0.74
+    on_time_rate: 0.88
+    sla_met: 0.90
+  task_medium:
+    agent: heuristic-baseline
+    score: 0.61
+    on_time_rate: 0.75
+    sla_met: 0.72
+  task_hard:
+    agent: heuristic-baseline
+    score: 0.48
+    on_time_rate: 0.58
+    sla_met: 0.55
