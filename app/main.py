@@ -16,6 +16,7 @@ from environment import SupplyChainEnv, SCENARIOS
 from grader import grade, PASSING_THRESHOLDS
 from models import Action, BaselineResult, GraderResult, Observation, Reward, StepResult, TaskSpec
 from tasks import TASK_MAP, TASKS
+from multi_agent_api import multi_agent_router
 
 # ─────────────────────────────────────────────────────────────
 # App setup
@@ -38,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount multi-agent router
+app.include_router(multi_agent_router)
 
 # Global environment registry (one env per task, lazily initialized)
 _envs: Dict[str, SupplyChainEnv] = {}
@@ -236,6 +240,7 @@ def run_baseline_endpoint(request: BaselineRunRequest):
         action = Action(
             order_id=order["order_id"],
             routing_decision=decision,
+            alternate_supplier=None,
             reasoning=reason,
         )
 
@@ -373,7 +378,12 @@ def demo(task_id: str = Query("task_easy", description="Task to demonstrate: tas
         else:
             decision, reason = "standard_route", f"Sufficient slack ({slack}d) for standard routing."
 
-        action = Action(order_id=order["order_id"], routing_decision=decision, reasoning=reason)
+        action = Action(
+            order_id=order["order_id"],
+            routing_decision=decision,
+            alternate_supplier=None,
+            reasoning=reason,
+        )
         result = env.step(action)
 
         demo_steps.append({

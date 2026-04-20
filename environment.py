@@ -7,12 +7,14 @@ from __future__ import annotations
 import random
 import math
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 from models import (
     Action, DisruptionEvent, NodeStatus, Observation,
     PendingOrder, Reward, ShipmentLane, StepResult,
 )
+
+SLATier = Literal["critical", "standard", "flexible"]
 
 # ─────────────────────────────────────────────────────────────
 # Scenario templates (one per task difficulty)
@@ -607,10 +609,7 @@ class SupplyChainEnv:
         for i in range(max(1, count)):
             sku = self._rng.choice(SKU_CATALOG)
             demand_node = self._rng.choice(DEMAND_NODES)
-            sla_tier = self._rng.choices(
-                ["critical", "standard", "flexible"],
-                weights=[0.20, 0.50, 0.30]
-            )[0]
+            sla_tier = cast(SLATier, self._rng.choice(["critical", "standard", "flexible"]))
             deadline_offset = {"critical": self._rng.randint(2, 4),
                                "standard": self._rng.randint(3, 6),
                                "flexible": self._rng.randint(5, 9)}[sla_tier]

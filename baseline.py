@@ -123,6 +123,8 @@ def run_baseline(task_id: str, client: OpenAI, verbose: bool = True) -> Baseline
                 max_tokens=300,
             )
             raw = response.choices[0].message.content
+            if raw is None:
+                raise ValueError("Empty response from LLM")
             action_data = json.loads(raw)
             action = Action(**action_data)
         except Exception as e:
@@ -132,6 +134,7 @@ def run_baseline(task_id: str, client: OpenAI, verbose: bool = True) -> Baseline
                 action = Action(
                     order_id=order["order_id"],
                     routing_decision="standard_route",
+                    alternate_supplier=None,
                     reasoning=f"Fallback due to API error: {e}",
                 )
             else:
@@ -190,10 +193,10 @@ def main():
 
     if use_heuristic:
         print("Running heuristic baseline (no LLM — fully reproducible)...")
-        # Import heuristic logic from main.py's baseline endpoint
+        # Import heuristic logic from the app package's baseline endpoint
         import sys, os as _os
         sys.path.insert(0, _os.path.dirname(__file__))
-        from main import run_baseline_endpoint, BaselineRunRequest
+        from app.main import run_baseline_endpoint, BaselineRunRequest
         for tid in tasks:
             req = BaselineRunRequest(task_id=tid)
             r = run_baseline_endpoint(req)
